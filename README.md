@@ -2,34 +2,32 @@
 
 ![license](https://img.shields.io/badge/license-MIT-brightgreen.svg)
 
-A professional Photoshop tool that automatically places multiple images as artboards, maintaining the original image dimensions for efficient layout.
+複数画像をアートボードとして自動的に配置し、ファイル名と拡張子を元にした自動リネームを実行するスクリプトです
 
-## 🚀 Features
+## 🚀 主な機能
 
-* 📐 Import multiple images at once
-* 🔄 Create artboards with original image dimensions
-* 🏷️ Layer names inherited from image filenames
-* 📝 Artboard names preserve image filenames and extensions
-* 📊 Images arranged vertically with 10000px wrapping
+* 複数の画像を一度にインポート
+* オリジナルの解像度を維持してアートボードを作成
+* ファイル名と拡張子を元にアートボードをリネーム
+* レイヤー名からは拡張子を除去
+* 10000px到達で2列目に折り返し
 
-## 💻 Requirements
+## 💻 要件
 
 * Photoshop 2025
 
-## 🔧 Installation
+## 🔧 セットアップ
 
-1. Download the script file
-2. Launch Photoshop
-3. Select the script via File > Browse > Scripts
+1. 本ページのReleasesからスクリプトをダウンロードし、任意の場所に保存します
+2. Photoshopを起動します
+3. メニューからファイル＞スクリプト＞参照と進みスクリプト選択してを実行します
 
-## 📱 Usage
+## 📱 使い方
 
-1. Run the script
-2. Select image files in the popup dialog
-3. Script automatically places images as artboards
+1. スクリプトを実行します
+2. 続いて出現するポップアップダイアログから読み込みたい画像を選択して開きます
+3. 自動で読み込んだ画像がアートボードとして配置されて、元のファイル名から取得したリネームを実行します
 
-This tool is designed to be intuitive - try it out to get familiar with it!
-
-## 📞 Contact
+## 📞 コンタクト
 
 * Discord: #tomimoto5151
