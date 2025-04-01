@@ -6,7 +6,21 @@ var VERTICAL_SPACING = 50; // アートボード間の縦の間隔（ピクセ�
 var HORIZONTAL_SPACING = 50; // アートボード間の横の間隔（ピクセル）
 var MAX_HEIGHT = 10000; // 最大高さ（ピクセル）
 
+// バージョンチェック
+function checkVersion() {
+    // Photoshop CC 2015 (バージョン16.0)以降でアートボードをサポート
+    var version = parseInt(app.version, 10);
+    if (version < 16) {
+        alert("このスクリプトはPhotoshop CC 2015（バージョン16.0）以降が必要です。\n現在のバージョン: " + app.version);
+        return false;
+    }
+    return true;
+}
+
 function main() {
+    // バージョンチェック
+    if (!checkVersion()) return;
+
     // ファイル選択ダイアログを表示
     var files = File.openDialog("アートボードに配置する画像を選択してください", "*.jpg;*.jpeg;*.png;*.tif;*.psd;*.gif", true);
     
@@ -30,8 +44,8 @@ function main() {
         var columns = []; // 各列の最大幅を保存する配列
         
         // 既存のアートボードチェック
-        if (activeDocument.artboards && activeDocument.artboards.length > 0) {
-            var lastArtboard = activeDocument.artboards[activeDocument.artboards.length - 1];
+        if (doc.artboards && doc.artboards.length > 0) {
+            var lastArtboard = doc.artboards[doc.artboards.length - 1];
             var rect = lastArtboard.artboardRect;
             currentY = rect[3] + VERTICAL_SPACING; // 下端 + 間隔
             columnHeight = rect[3];
@@ -40,8 +54,21 @@ function main() {
         // ファイル名とアートボードの対応を記録
         var artboardLayerMap = [];
         
+        // 進捗表示の準備
+        var progressWin = new Window("palette", "画像配置中...");
+        progressWin.progressBar = progressWin.add("progressbar", undefined, 0, files.length);
+        progressWin.progressBar.preferredSize.width = 300;
+        progressWin.status = progressWin.add("statictext", undefined, "準備中...");
+        progressWin.status.preferredSize.width = 300;
+        progressWin.show();
+        
         // 各ファイルを処理
         for (var i = 0; i < files.length; i++) {
+            // 進捗更新
+            progressWin.progressBar.value = i;
+            progressWin.status.text = "処理中: " + (i+1) + "/" + files.length;
+            progressWin.update();
+            
             var currentFile = files[i];
             var fullFileName = decodeURI(currentFile.name);
             
@@ -49,56 +76,64 @@ function main() {
             var lastDotIndex = fullFileName.lastIndexOf('.');
             var fileNameWithoutExt = (lastDotIndex !== -1) ? fullFileName.substring(0, lastDotIndex) : fullFileName;
             
-            // 一時的にファイルを開いてサイズを取得
-            var tempDoc = app.open(currentFile);
-            var imgWidth = tempDoc.width.value;
-            var imgHeight = tempDoc.height.value;
-            tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-            
-            // 縦の高さが最大値を超えるか確認
-            if (columnHeight + imgHeight > MAX_HEIGHT) {
-                // 現在の列の最大幅を保存
-                columns.push(columnMaxWidth);
+            try {
+                // 一時的にファイルを開いてサイズを取得
+                var tempDoc = app.open(currentFile);
+                var imgWidth = tempDoc.width.value;
+                var imgHeight = tempDoc.height.value;
+                tempDoc.close(SaveOptions.DONOTSAVECHANGES);
                 
-                // 新しい列を開始
-                if (columns.length > 0) {
-                    // これまでの列の最大幅を使用して次の列の開始位置を計算
-                    currentX = 0;
-                    for (var j = 0; j < columns.length; j++) {
-                        currentX += columns[j] + HORIZONTAL_SPACING;
+                // 縦の高さが最大値を超えるか確認
+                if (columnHeight + imgHeight > MAX_HEIGHT) {
+                    // 現在の列の最大幅を保存
+                    columns.push(columnMaxWidth);
+                    
+                    // 新しい列を開始
+                    if (columns.length > 0) {
+                        // これまでの列の最大幅を使用して次の列の開始位置を計算
+                        currentX = 0;
+                        for (var j = 0; j < columns.length; j++) {
+                            currentX += columns[j] + HORIZONTAL_SPACING;
+                        }
                     }
+                    
+                    currentY = 0;
+                    columnHeight = 0;
+                    columnMaxWidth = 0; // 新しい列の最大幅をリセット
                 }
                 
-                currentY = 0;
-                columnHeight = 0;
-                columnMaxWidth = 0; // 新しい列の最大幅をリセット
+                // 仮の名前でアートボードを作成
+                var artboardLayer = createEmptyArtboard(currentX, currentY, imgWidth, imgHeight, "temp_artboard_" + i);
+                
+                // 画像をそのアートボードに配置
+                var placedLayer = placeImageInArtboard(currentFile, artboardLayer, currentX, currentY);
+                
+                // 配置したレイヤーの名前を拡張子なしに設定
+                placedLayer.name = fileNameWithoutExt;
+                
+                // マッピング情報を保存
+                artboardLayerMap.push({
+                    artboardLayer: artboardLayer,
+                    placedLayer: placedLayer,
+                    fullFileName: fullFileName
+                });
+                
+                // この列の最大幅を更新
+                if (imgWidth > columnMaxWidth) {
+                    columnMaxWidth = imgWidth;
+                }
+                
+                // 次の位置を更新
+                currentY += imgHeight + VERTICAL_SPACING;
+                columnHeight += imgHeight + VERTICAL_SPACING;
+            } catch (err) {
+                alert("ファイル処理中にエラーが発生しました: " + fullFileName + "\nエラー: " + err);
+                continue; // 次のファイルに進む
             }
-            
-            // 仮の名前でアートボードを作成
-            var artboardLayer = createEmptyArtboard(currentX, currentY, imgWidth, imgHeight, "temp_artboard_" + i);
-            
-            // 画像をそのアートボードに配置
-            var placedLayer = placeImageInArtboard(currentFile, artboardLayer, currentX, currentY);
-            
-            // 配置したレイヤーの名前を拡張子なしに設定
-            placedLayer.name = fileNameWithoutExt;
-            
-            // マッピング情報を保存
-            artboardLayerMap.push({
-                artboardLayer: artboardLayer,
-                placedLayer: placedLayer,
-                fullFileName: fullFileName
-            });
-            
-            // この列の最大幅を更新
-            if (imgWidth > columnMaxWidth) {
-                columnMaxWidth = imgWidth;
-            }
-            
-            // 次の位置を更新
-            currentY += imgHeight + VERTICAL_SPACING;
-            columnHeight += imgHeight + VERTICAL_SPACING;
         }
+        
+        // 進捗ウィンドウを閉じる
+        progressWin.close();
         
         // すべての画像を配置した後、アートボード名を変更
         renameArtboards(artboardLayerMap);
