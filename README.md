@@ -12,8 +12,6 @@
 * レイヤー名からは拡張子を除去
 * 10000px到達で2列目に折り返し
 
-![s01-image-to-artboard-generator](https://github.com/user-attachments/assets/57a8f690-639f-4f38-aa42-09ab4fc8cf89)
-
 ## 💻 要件
 
 * Photoshop 2025
